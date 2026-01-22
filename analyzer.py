@@ -455,7 +455,7 @@ class VolatilityCrushAnalyzer:
         self.strike_price_var.set(f"{self.current_spot:.2f}")
         self.iv_var.set(f"{self.current_iv*100:.4f}")
 
-        self.price_current_straddle()
+        #self.price_current_straddle()
 
 
     def price_current_straddle(self):
@@ -490,8 +490,8 @@ class VolatilityCrushAnalyzer:
 
         self.delta_label.config(text=f"{delta:.3f}")
         self.gamma_label.config(text=f"{gamma:.3f}")
-        self.vega_label.config(text=f"{vega:.3f}")
-        self.theta_label.config(text=f"{theta:.3f}")
+        self.vega_label.config(text=f"{vega:.2f}")
+        self.theta_label.config(text=f"{theta:.2f}")
 
         self.analyze_btn.config(state='normal')
 
@@ -597,7 +597,7 @@ class VolatilityCrushAnalyzer:
         if option_type == 'call':
             return norm.cdf(d1)
         else:
-            return -norm.cdf(d1)
+            return -norm.cdf(-d1)
 
     def calculate_gamma(self, S, K, T, r, sigma):
         d1 = (np.log(S/K) + (r + .5*sigma**2)*T) / (sigma * np.sqrt(T))
