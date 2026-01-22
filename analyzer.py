@@ -93,7 +93,7 @@ class VolatilityCrushAnalyzer:
 
         self.setup_connection_section(left_frame, 0)
         self.setup_market_data_section(left_frame, 1)
-        self.setup_current_straddle_section(left_frame, 2)
+        self.setup_current_options_section(left_frame, 2)
         self.setup_current_greeks_section(left_frame, 3)
 
         self.seteup_scenario_section(right_frame, 0)
@@ -162,16 +162,15 @@ class VolatilityCrushAnalyzer:
         self.days_var = tk.StringVar(value="30")
         ttk.Entry(data_frame, textvariable=self.days_var, width=15, font=('Arial', 10, 'bold')).grid(row=4, column=1, sticky=(tk.W, tk.E), pady=(0, 8))
 
-        # Stradle 
-        self.price_btn = ttk.Button(data_frame, text="Price Straddle", command=self.price_current_straddle, state='disabled')
+        # Price Button 
+        self.price_btn = ttk.Button(data_frame, text="Price Option", command=lambda: (self.price_current_straddle(), self.price_current_strangle()), state='disabled')
         self.price_btn.grid(row=5, column=0, columnspan=2, padx=(10, 0))
 
-        # Try Adding Strangle
-
-    def setup_current_straddle_section(self, parent, row):
-        pricing_frame = ttk.LabelFrame(parent, text="Current Straddle Price", padding="10")
+    def setup_current_options_section(self, parent, row):
+        pricing_frame = ttk.LabelFrame(parent, text="Current Options Pricing", padding="10")
         pricing_frame.grid(row=row, column=0, sticky=(tk.W, tk.E), pady=(0, 15))
         pricing_frame.columnconfigure(1, weight=1)
+        pricing_frame.columnconfigure(3, weight=1)
 
         ttk.Label(pricing_frame, text="Call Price:").grid(row=0, column=0, padx=(0, 10), pady=(0, 5), sticky=tk.W)
         self.call_price_label = ttk.Label(pricing_frame, text="$0.00", font=("Arial", 11, "bold"), foreground='green')
@@ -182,12 +181,16 @@ class VolatilityCrushAnalyzer:
         self.put_price_label.grid(row=1, column=1, sticky=tk.W, pady=(0, 5))
 
         separator = ttk.Separator(pricing_frame, orient='horizontal')
-        separator.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=8)
+        separator.grid(row=2, column=0, columnspan=4, sticky=(tk.W, tk.E), pady=8)
 
         ttk.Label(pricing_frame, text="Straddle Price:").grid(row=3, column=0, padx=(0, 10), pady=(0, 5), sticky=tk.W)
         self.straddle_price_label = ttk.Label(pricing_frame, text="$0.00", font=("Arial", 14, "bold"), foreground='blue')
         self.straddle_price_label.grid(row=3, column=1, sticky=tk.W, pady=(0, 5))   
 
+        ttk.Label(pricing_frame, text="Strangle Price:").grid(row=3, column=2, padx=(15, 10), pady=(0, 5), sticky=tk.W)
+        self.strangle_price_label = ttk.Label(pricing_frame, text="$0.00", font=("Arial", 14, "bold"), foreground='purple')
+        self.strangle_price_label.grid(row=3, column=3, sticky=tk.W, pady=(0, 5))
+                
     def setup_current_greeks_section(self, parent, row):
         greeks_frame = ttk.LabelFrame(parent, text="Current Greeks", padding="10")
         greeks_frame.grid(row=row, column=0, sticky=(tk.W, tk.E), pady=(0, 15))
@@ -499,6 +502,36 @@ class VolatilityCrushAnalyzer:
 
         self.update_status(f"Straddle priced: ${straddle_price}, Call: ${call_price:.2f} + Put: ${put_price:.2f}")
 
+
+    def price_current_strangle(self):
+        try:
+            spot_price = float(self.spot_price_var.get())
+            strike_price = float(self.strike_price_var.get())
+            iv_percent = float(self.iv_var.get())
+            days_to_expiry = int(self.days_var.get())
+        except ValueError:
+            messagebox.showerror("Error", "Please enter a valid number for all parameters")
+            return
+        
+        iv_decimal = iv_percent / 100
+        T = days_to_expiry / 365.0
+        r = self.risk_free_rate
+        
+        # For strangle, use OTM strikes (e.g., +/- 5% from spot)
+        call_strike = strike_price * 1.05  # 5% OTM call
+        put_strike = strike_price * 0.95   # 5% OTM put
+        
+        # Calculate strangle
+        call_price = self.black_scholes_call(spot_price, call_strike, T, r, iv_decimal)
+        put_price = self.black_scholes_put(spot_price, put_strike, T, r, iv_decimal)
+        strangle_price = call_price + put_price
+        
+        # Update UI
+        self.strangle_price_label.config(text=f"${strangle_price:.2f}", foreground='purple')
+        
+        self.update_status(f"Strangle priced: ${strangle_price:.2f} (Call@{call_strike:.2f}: ${call_price:.2f} + Put@{put_strike:.2f}: ${put_price:.2f})")
+
+
     def analyze_scenario(self):
         try:
             new_spot = float(self.new_spot_price.get())
@@ -594,4 +627,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
